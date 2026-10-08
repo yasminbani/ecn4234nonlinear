@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ECN 4234 SIM: Nonlinear Regression Functions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF2F1; --surface:#FFFFFF; --ink:#16231F; --muted:#56635F; --line:#D3DBD8;
+  --accent:#1E5E52; --accent-ink:#FFFFFF; --accent-soft:#DCEBE6; --gold:#B8892A; --gold-soft:#FBF3E2;
+  --good:#2E7D4F; --good-soft:#E3F2E8; --bad:#A3352B; --bad-soft:#FBE9E7; --code:#F2F4F5;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101816; --surface:#18221F; --ink:#E6EEEB; --muted:#9AA9A4; --line:#2C3A36;
+    --accent:#5FB3A0; --accent-ink:#0C1412; --accent-soft:#1F3631; --gold:#D9AE52; --gold-soft:#2C2616;
+    --good:#6CC08E; --good-soft:#1A2E22; --bad:#E0786C; --bad-soft:#331C19; --code:#141C1A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101816; --surface:#18221F; --ink:#E6EEEB; --muted:#9AA9A4; --line:#2C3A36;
+  --accent:#5FB3A0; --accent-ink:#0C1412; --accent-soft:#1F3631; --gold:#D9AE52; --gold-soft:#2C2616;
+  --good:#6CC08E; --good-soft:#1A2E22; --bad:#E0786C; --bad-soft:#331C19; --code:#141C1A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html{font-size:var(--base-size,19px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:1rem;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.2;margin:0}
+h1{font-size:clamp(1.9rem,4.5vw,2.6rem)}
+h2{font-size:1.45rem;margin-top:2.2rem;margin-bottom:.6rem}
+h3{font-size:1.12rem;margin-top:1.6rem;margin-bottom:.4rem}
+p{margin:0 0 .9rem}
+ul,ol{margin:0 0 1rem;padding-left:1.3rem}
+li{margin:.25rem 0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.muted{color:var(--muted)}
+.m{font-family:var(--serif);font-style:italic}
+.hidden{display:none!important}
+
+/* ---------- Layout ---------- */
+.shell{display:grid;grid-template-columns:310px minmax(0,1fr);min-height:100%}
+.side{position:sticky;top:0;height:100vh;height:100dvh;overflow:auto;border-right:1px solid var(--line);background:var(--surface);padding:24px 18px 24px;padding-top:calc(24px + env(safe-area-inset-top,0px))}
+.course{font-size:.82rem;color:var(--muted);margin-bottom:4px}
+.side h1{font-size:1.25rem;margin-bottom:18px}
+.who{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.88rem;margin-bottom:18px}
+.who b{display:block}
+.who button{background:none;border:0;color:var(--accent);padding:0;font-size:.82rem;text-decoration:underline}
+.nav{list-style:none;padding:0;margin:0}
+.nav li{margin:0}
+.nav button{width:100%;display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:8px;text-align:left;background:none;border:0;border-radius:8px;padding:8px 8px;font-size:.92rem;color:var(--ink)}
+.nav button:hover{background:var(--accent-soft)}
+.nav button[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}
+.nav .dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:.72rem;font-weight:700}
+.nav .done .dot{background:var(--good);border-color:var(--good);color:#fff}
+.nav button[aria-current="page"] .dot{border-color:var(--accent-ink)}
+.nav .t{font-size:.78rem;opacity:.75}
+.navsep{height:1px;background:var(--line);margin:10px 4px}
+.progress{margin-top:18px;font-size:.82rem;color:var(--muted)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.sync{margin-top:14px;font-size:.8rem;color:var(--muted)}
+.topbar{display:none}
+main{padding:40px clamp(18px,5vw,56px) 80px;min-width:0}
+.page{max-width:820px}
+.time{display:inline-block;font-size:.85rem;color:var(--muted);margin:8px 0 18px}
+
+@media (max-width:880px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:20;transform:translateX(-100%);transition:transform .2s;height:100%}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  .topbar{display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  .topbar button{border:1px solid var(--line);background:none;border-radius:8px;padding:6px 12px}
+  .topbar span{font-weight:600;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  main{padding-top:24px}
+}
+
+/* ---------- Content blocks ---------- */
+.eq{font-family:var(--serif);font-size:1.12rem;text-align:center;margin:1rem 0 1.2rem;overflow-x:auto;padding:4px 0;white-space:nowrap}
+.eq i{font-style:italic}
+.se{display:block;font-size:.9rem;color:var(--muted);font-style:normal;white-space:pre}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:14px 18px;margin:1.2rem 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-soft)}
+.callout.think{border-color:var(--muted);background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--muted)}
+.callout h4{margin:0 0 6px;font-size:.95rem;color:var(--accent)}
+.callout.warn h4{color:var(--bad)}
+.callout.think h4{color:var(--muted)}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+pre.stata{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:.85rem;overflow-x:auto;margin:1rem 0}
+.tbl{overflow-x:auto;margin:1rem 0 1.4rem}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--accent);color:var(--accent-ink);font-weight:600}
+td input{width:100%}
+
+/* ---------- Activities ---------- */
+.act{background:var(--gold-soft);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:0 12px 12px 0;padding:18px 20px;margin:1.6rem 0}
+.act h4{margin:0 0 8px;font-family:var(--sans);font-size:.98rem;color:var(--gold)}
+.field{display:grid;grid-template-columns:1fr minmax(120px,170px) 28px;gap:10px;align-items:center;padding:8px 0;border-top:1px dashed var(--line)}
+.field:first-of-type{border-top:0}
+.field label{font-size:.95rem}
+.field .unit{font-size:.8rem;color:var(--muted)}
+input[type=text],input[type=number],select,textarea{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
+textarea{min-height:96px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.mark{font-weight:700;text-align:center}
+.mark.ok{color:var(--good)} .mark.no{color:var(--bad)}
+.field.ok input,.field.ok select{border-color:var(--good);background:var(--good-soft)}
+.field.no input,.field.no select{border-color:var(--bad);background:var(--bad-soft)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.btn{border:0;border-radius:999px;padding:10px 20px;font-weight:600;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--ink)}
+.btn.small{padding:7px 14px;font-size:.88rem}
+.btn:disabled{opacity:.5;cursor:default}
+.solution{margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:.94rem}
+.solution p:last-child{margin:0}
+.feedback{margin-top:10px;font-size:.92rem;font-weight:600}
+@media (max-width:560px){.field{grid-template-columns:1fr 28px}.field label{grid-column:1/-1}}
+
+/* ---------- MCQ ---------- */
+.q{padding:18px 0;border-top:1px solid var(--line)}
+.q:first-child{border-top:0}
+.qstem{font-weight:600;margin-bottom:10px}
+.qstem .n{color:var(--accent);margin-right:6px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;background:var(--surface)}
+.opt:hover{border-color:var(--accent)}
+.opt input{margin-top:5px;accent-color:var(--accent)}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.locked .opt.right{border-color:var(--good);background:var(--good-soft)}
+.locked .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.explain{font-size:.92rem;margin-top:8px;color:var(--muted)}
+.locked .opt{cursor:default}
+.subq{margin:6px 0 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:clamp(18px,3vw,28px);margin:1.2rem 0}
+
+/* ---------- Explorer ---------- */
+.explorer{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin:1.4rem 0}
+.explorer svg{width:100%;height:auto;display:block}
+.explorer .ctrl{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:10px}
+.explorer input[type=range]{flex:1;min-width:180px;accent-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;margin-top:8px}
+.legend label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.sw{width:14px;height:3px;border-radius:2px;display:inline-block}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
+.readout div{border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.85rem}
+.readout b{display:block;font-family:var(--serif);font-size:1.25rem}
+
+/* ---------- Login & results ---------- */
+.login{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login .card{max-width:480px;width:100%}
+.login h1{margin:6px 0 10px}
+.login label{display:block;font-weight:600;font-size:.92rem;margin:14px 0 6px}
+.err{color:var(--bad);font-size:.88rem;margin-top:6px}
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.score b{font-family:var(--serif);font-size:3rem;line-height:1}
+.status{font-size:.9rem;padding:10px 14px;border-radius:10px;margin-top:12px}
+.status.ok{background:var(--good-soft);color:var(--good)}
+.status.wait{background:var(--gold-soft);color:var(--ink)}
+.navbtns{display:flex;justify-content:space-between;gap:12px;margin-top:2.4rem;padding-top:1.4rem;border-top:1px solid var(--line)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;padding:20px}
+.modal .card{max-width:440px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* =====================================================================
+   SETTINGS — paste your Supabase details below (Project Settings > API)
+   ===================================================================== */
+const SUPABASE_URL = "https://zzkijzfifqpoycyaswgp.supabase.co";   // e.g. https://abcdefgh.supabase.co
+const SUPABASE_KEY = "sb_publishable_mr7ZfM49iXpcTBK8ren_Ow_WZihrpid";
+const COURSE = "ECN 4234 Applied Econometrics";
+const TEXT_SIZE = 19;   // base text size in pixels (16 = small, 19 = default, 22 = large)
+/* ===================================================================== */
+
+(function(){
+"use strict";
+document.documentElement.style.setProperty("--base-size", TEXT_SIZE + "px");
+const KEY = "sim_nlr_v1";
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- Storage (per student, keyed by matric no.) ---------- */
+function load(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+function save(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+let S = null; // student state
+function blank(student){ return { student, startedAt: Date.now(), done:{}, acts:{}, notes:{}, pre:null, quiz:null, quizAttempts:0, preAttempts:0, outbox:[] }; }
+function persist(){ if (S) save(KEY+":"+S.student.matric, S); }
+
+/* ---------- Units / navigation ---------- */
+const PAGES = [
+  {id:"home", title:"Start here", t:""},
+  {id:"pre", title:"Pre-check quiz", t:"10 min"},
+  {id:"u1", title:"Why nonlinear?", t:"15 min", n:1},
+  {id:"u2", title:"Polynomials", t:"30 min", n:2},
+  {id:"u3", title:"Logarithms", t:"35 min", n:3},
+  {id:"u4", title:"Nonlinear in parameters", t:"10 min", n:4},
+  {id:"u5", title:"Interactions", t:"35 min", n:5},
+  {id:"u6", title:"Choosing a specification", t:"10 min", n:6},
+  {id:"quiz", title:"Practice quiz", t:"30 min"},
+  {id:"results", title:"My results", t:""},
+];
+let current = "home";
+
+/* ---------- Answer checking helpers ---------- */
+function num(v){
+  if (v==null) return NaN;
+  const s = String(v).replace(/[−–—]/g,"-").replace(/,/g,"").replace(/%/g,"").replace(/^RM/i,"").trim();
+  return s==="" ? NaN : Number(s);
+}
+function correct(item, val){
+  if (item.type==="sel") return String(val)===String(item.ans);
+  const x = num(val); return isFinite(x) && Math.abs(x - item.ans) <= item.tol;
+}
+
+/* =====================================================================
+   CONTENT
+   ===================================================================== */
+const ACTS = {
+  u1:{title:"Activity 1.1", intro:`Suppose <span class="m">f</span>(<span class="m">X</span>) = 10 + 4<span class="m">X</span> − 0.5<span class="m">X</span><sup>2</sup>. Use the before-and-after rule.`,
+    items:[{id:"a",label:"ΔY when X rises from 1 to 2",ans:2.5,tol:.01},{id:"b",label:"ΔY when X rises from 3 to 4",ans:.5,tol:.01}],
+    sol:`<p>f(2) − f(1) = 16 − 13.5 = 2.5 and f(4) − f(3) = 18 − 17.5 = 0.5. The same one-unit change in X has a smaller effect at higher X, so the marginal effect is not constant.</p>`},
+  u2:{title:"Activity 2.1", intro:`Use the quadratic estimates: TestScore^ = 607.3 + 3.851 Income − 0.0423 Income<sup>2</sup>. Round to 1–2 decimals.`,
+    items:[{id:"a",label:"Predicted change when Income rises from 25 to 26",ans:1.69,tol:.03},
+           {id:"b",label:"Income level where the predicted score is at its maximum",unit:"$000",ans:45.5,tol:.15},
+           {id:"c",label:"Predicted test score when Income = 10",ans:641.6,tol:.25}],
+    sol:`<p>(a) 3.851 − 0.0423(26² − 25²) = 3.851 − 0.0423 × 51 = 1.69.<br>(b) Set 3.851 − 2(0.0423)Income = 0, so Income* = 3.851/0.0846 = 45.5.<br>(c) 607.3 + 38.51 − 4.23 = 641.6.</p>`},
+  u3:{title:"Activity 3.1", intro:`Classify each model and give the effect it implies.<br>(a) Consumption^ = 120 + 45 ln(Income), Consumption in RM<br>(b) ln(Wage)^ = 1.20 + 0.085 Educ<br>(c) ln(Q)^ = 4.5 − 1.3 ln(P)`,
+    items:[{id:"a1",label:"(a) Model type",type:"sel",opts:["Linear-log","Log-linear","Log-log"],ans:0},
+           {id:"a2",label:"(a) Change in consumption for a 1% rise in income",unit:"RM",ans:.45,tol:.005},
+           {id:"b1",label:"(b) Model type",type:"sel",opts:["Linear-log","Log-linear","Log-log"],ans:1},
+           {id:"b2",label:"(b) Approx. % change in wage for 1 more year of education",unit:"%",ans:8.5,tol:.05},
+           {id:"c1",label:"(c) Model type",type:"sel",opts:["Linear-log","Log-linear","Log-log"],ans:2},
+           {id:"c2",label:"(c) % change in Q for a 1% rise in P",unit:"%",ans:-1.3,tol:.01}],
+    sol:`<p>(a) Linear-log: 0.01 × 45 = RM0.45. (b) Log-linear: 100 × 0.085 = 8.5%. (c) Log-log: β₁ is an elasticity, so −1.3%.</p>`},
+  u4:{title:"Activity 4.1", intro:`TestScore^ = 703.2[1 − e<sup>−0.0552(Income + 34.0)</sup>]`,
+    items:[{id:"a",label:"Predicted test score when Income = 10",ans:641.3,tol:.4},
+           {id:"b",label:"Why can't OLS estimate this model?",type:"sel",opts:["The parameters enter nonlinearly (inside the exponential)","Income enters nonlinearly","The errors are heteroskedastic"],ans:0}],
+    sol:`<p>(a) 703.2 × (1 − e<sup>−0.0552 × 44.0</sup>) = 703.2 × (1 − 0.088) = 641.3.<br>(b) β₁ and β₂ sit inside the exponential, so the model is nonlinear in parameters and cannot be rewritten as a linear regression. It needs NLS.</p>`},
+  u5a:{title:"Activity 5.1", intro:`Use TestScore^ = 664.1 − 18.2 HiEL − 1.9 HiSTR − 3.5 (HiSTR × HiEL) to predict the mean score in each group.`,
+    items:[{id:"ll",label:"Low STR, low EL (HiSTR = 0, HiEL = 0)",ans:664.1,tol:.06},
+           {id:"hl",label:"High STR, low EL (HiSTR = 1, HiEL = 0)",ans:662.2,tol:.06},
+           {id:"lh",label:"Low STR, high EL (HiSTR = 0, HiEL = 1)",ans:645.9,tol:.06},
+           {id:"hh",label:"High STR, high EL (HiSTR = 1, HiEL = 1)",ans:640.5,tol:.06}],
+    sol:`<p>664.1; 664.1 − 1.9 = 662.2; 664.1 − 18.2 = 645.9; 664.1 − 18.2 − 1.9 − 3.5 = 640.5. These equal the cell means in the lecture exactly, because a model with both dummies and their interaction reproduces the four group means.</p>`},
+  u5b:{title:"Activity 5.2", intro:`Use the binary-continuous and continuous-continuous models from this unit.`,
+    items:[{id:"a",label:"Predicted score at STR = 20 when HiEL = 0",ans:662.8,tol:.06},
+           {id:"b",label:"Predicted score at STR = 20 when HiEL = 1",ans:642.8,tol:.06},
+           {id:"c",label:"Effect of a 1-point rise in PctEL when STR = 20",ans:-.646,tol:.002}],
+    sol:`<p>(a) 682.2 − 0.97 × 20 = 662.8. (b) 687.8 − 2.25 × 20 = 642.8. (c) ΔY/ΔPctEL = −0.67 + 0.0012 × 20 = −0.646.</p>`},
+};
+
+const PRE = [
+  {q:`In Y<sub>i</sub> = β<sub>0</sub> + β<sub>1</sub>X<sub>i</sub> + u<sub>i</sub>, the effect on Y of a one-unit increase in X is:`, o:["β₀","β₁, regardless of the value of X","β₁X","It depends on the value of X"], a:1, e:"In a linear model the slope is constant."},
+  {q:"ln(110) − ln(100) is approximately:", o:["0.10","10","1.10","0.01"], a:0, e:"ln(1.1) = 0.0953 ≈ 0.10, a 10% change."},
+  {q:"To test whether two coefficients are jointly zero, you use:", o:["Two separate t-tests","An F-test","The R²","A test of the intercept"], a:1, e:"Joint hypotheses need an F-test."},
+  {q:"OLS can be used whenever the model is:", o:["Linear in the X variables","Linear in the parameters (β's)","Free of logarithms","Free of squared terms"], a:1, e:"Nonlinear functions of X are fine; the β's must enter linearly."},
+  {q:"If ln(Y) increases by 0.03, then Y increases by approximately:", o:["0.03 units","3%","30%","0.03%"], a:1, e:"100 × Δln(Y) ≈ percentage change in Y."},
+];
+
+const QA = [
+  {id:"A1", q:"Why is OLS on a linear model biased when the true relationship is nonlinear?", o:["Because the errors are heteroskedastic","Because the functional form is mis-specified","Because OLS cannot handle continuous regressors","It is not biased, only inefficient"], a:1, e:"The wrong functional form means the estimated slope does not equal the true effect, even on average."},
+  {id:"A2", q:"Which model can be estimated by OLS?", o:["Y = β₀(1 − e^(−β₁X)) + u","Y = β₀ + β₁X + β₂X² + u","Y = β₀X^β₁ + u","Y = β₀ + X^β₁ + u"], a:1, e:"Polynomials are linear in parameters; the others are not."},
+  {id:"A3", q:"In a quadratic model Y = β₀ + β₁X + β₂X², the hypothesis that the relationship is linear is:", o:["β₁ = 0","β₂ = 0","β₁ = β₂ = 0","β₀ = 0"], a:1, e:"If β₂ = 0 the quadratic reduces to a straight line."},
+  {id:"A4", q:"To test whether a cubic model can be reduced to a linear model you should use:", o:["A t-test on X³","A t-test on X²","An F-test that the coefficients on X² and X³ are jointly zero","A comparison of R²"], a:2, e:"Linearity is a joint restriction on two coefficients."},
+  {id:"A5", q:"In a log-log model, β₁ is best described as:", o:["A semi-elasticity","An elasticity","A marginal effect in units","The intercept"], a:1, e:"β₁ = %ΔY / %ΔX."},
+  {id:"A6", q:"Why can you not compare R² between ln(Y) = β₀ + β₁X and Y = β₀ + β₁ln(X)?", o:["They use different numbers of observations","They have different dependent variables","Log models always have a lower R²","R² is undefined for log models"], a:1, e:"R² measures the share of variance explained in Y or in ln(Y), which are different variables."},
+  {id:"A7", q:"In Y = β₀ + β₁D + β₂X + β₃(D×X), the coefficient β₃ measures:", o:["The difference in intercepts between the two groups","The difference in slopes between the two groups","The effect of D when X = 0","The average effect of X"], a:1, e:"The slope for D = 1 is β₂ + β₃."},
+  {id:"A8", q:"Testing whether the two regression lines in the binary-continuous model are identical requires:", o:["H₀: β₁ = 0 by t-test","H₀: β₃ = 0 by t-test","H₀: β₁ = β₃ = 0 by F-test","H₀: β₂ = 0 by t-test"], a:2, e:"Identical lines need both the intercept shift and the slope shift to be zero."},
+  {id:"A9", q:"Nonlinear least squares is needed when the model is:", o:["Nonlinear in X","Nonlinear in the parameters","Heteroskedastic","Estimated with dummy variables"], a:1, e:"Nonlinearity in X alone can still be handled by OLS."},
+  {id:"A10", q:"The negative exponential growth model was proposed because:", o:["The polynomial can predict decreasing Y and the linear-log has no upper bound","OLS was not available","It always has a higher R²","It is linear in parameters"], a:0, e:"It always increases but approaches a maximum (asymptote)."},
+];
+const QB = [
+  {id:"B1", q:"Explain, using the “before and after” rule, why the effect of X on Y is not constant in a quadratic model.",
+   m:"ΔY = β₁ΔX + β₂[(X + ΔX)² − X²] = (β₁ + 2β₂X + β₂ΔX)ΔX. This depends on X, so the effect changes with the starting value."},
+  {id:"B2", q:"Why is it dangerous to use the quadratic TestScore–Income model to predict the effect of raising income from 65 to 66?",
+   m:"Income of 65 is at or beyond the edge of the data. The quadratic turns down after about 45.5, so it would predict a decline that comes from the functional form, not from the data."},
+  {id:"B3", q:"Distinguish between statistical significance and economic (real-world) importance of a nonlinear term. Give an example from the lecture.",
+   m:"A term can be statistically significant yet change predicted effects very little (or the reverse). E.g. the cubic income term is only just significant (p = 0.049) and changes predicted effects only modestly relative to the quadratic; for STR, the question is whether nonlinear terms change the effect of class-size reduction enough to matter for policy."},
+  {id:"B4", q:"When STR enters as a cubic and you want the effect of STR to differ by HiEL, why must you interact HiEL with all three terms?",
+   m:"Interacting only STR lets the linear part differ by group but forces the curvature (STR², STR³) to be the same. Interacting all terms lets the whole function differ."},
+];
+const QC = [
+  {id:"C1", stem:`A study of Malaysian workers estimates Wage^ = 5.00 + 0.60 Exper − 0.012 Exper<sup>2</sup>, where Wage is RM per hour and Exper is years of experience.`,
+   items:[{id:"C1a",label:"(a) Change in wage when experience rises from 5 to 6 years",unit:"RM",ans:.468,tol:.006},
+          {id:"C1b",label:"(b) Change in wage when experience rises from 30 to 31 years",unit:"RM",ans:-.132,tol:.006},
+          {id:"C1c",label:"(c) Experience level at which predicted wage is highest",unit:"years",ans:25,tol:.1},
+          {id:"C1d",label:"(d) The t-statistic on Exper² is −4.0. At 5%:",type:"sel",opts:["Reject linearity","Do not reject linearity"],ans:0}],
+   sol:"(a) 0.60 − 0.012(36 − 25) = 0.468. (b) 0.60 − 0.012(961 − 900) = −0.132. (c) 0.60/(2 × 0.012) = 25. (d) |t| = 4.0 > 1.96, reject H₀: β₂ = 0."},
+  {id:"C2", stem:`Linear-log model: TestScore^ = 557.8 + 36.42 ln(Income), SE(slope) = 1.40.`,
+   items:[{id:"C2a",label:"(a) Predicted test score when Income = 10",ans:641.7,tol:.25},
+          {id:"C2b",label:"(b) Exact predicted change when Income rises from 10 to 11",ans:3.47,tol:.03},
+          {id:"C2c_lo",label:"(c) Lower bound of 95% CI for the effect of a 1% rise in Income",ans:.337,tol:.004},
+          {id:"C2c_hi",label:"(c) Upper bound of that 95% CI",ans:.392,tol:.004}],
+   sol:"(a) 557.8 + 36.42 × 2.3026 = 641.7. (b) 36.42 × ln(1.1) = 3.47 (the approximation gives 3.64). (c) 36.42 ± 1.96 × 1.40 = [33.68, 39.16]; × 0.01 = [0.337, 0.392]."},
+  {id:"C3", stem:`ln(Wage)^ = 1.20 + 0.085 Educ − 0.25 Female, where Female = 1 for women.`,
+   items:[{id:"C3a",label:"(a) Approximate % change in wage from 1 more year of education",unit:"%",ans:8.5,tol:.05},
+          {id:"C3b",label:"(b) Exact % wage difference, women vs men",unit:"%",ans:-22.1,tol:.2}],
+   sol:"(a) 100 × 0.085 = 8.5%. (b) 100 × (e^−0.25 − 1) = −22.1%. The approximation (−25%) is poor because −0.25 is a large change in ln(Y)."},
+  {id:"C4", stem:`Demand: ln(Q)^ = 4.5 − 1.3 ln(P), SE(slope) = 0.25.`,
+   items:[{id:"C4a",label:"(a) Demand is:",type:"sel",opts:["Elastic","Inelastic","Unit elastic"],ans:0},
+          {id:"C4b",label:"(b) % change in quantity if price rises 5%",unit:"%",ans:-6.5,tol:.05},
+          {id:"C4c_t",label:"(c) t-statistic for H₀: β₁ = −1",ans:-1.2,tol:.02},
+          {id:"C4c_d",label:"(c) Decision at 5%",type:"sel",opts:["Reject H₀","Do not reject H₀"],ans:1}],
+   sol:"(a) |−1.3| > 1, elastic. (b) −1.3 × 5 = −6.5%. (c) t = (−1.3 + 1)/0.25 = −1.2; |t| < 1.96, do not reject unit elasticity."},
+  {id:"C5", stem:`TestScore^ = 682.2 − 0.97 STR + 5.6 HiEL − 1.28 (STR × HiEL).`,
+   items:[{id:"C5a",label:"(a) Effect of reducing STR by 2 when HiEL = 1",unit:"points",ans:4.5,tol:.05},
+          {id:"C5b",label:"(b) Score gap (HiEL = 1 minus HiEL = 0) at STR = 20",unit:"points",ans:-20,tol:.1}],
+   sol:"(a) Slope for HiEL = 1 is −2.25, so −2.25 × (−2) = +4.5. (b) 5.6 − 1.28 × 20 = −20.0."},
+  {id:"C6", stem:`For practice: a linear model of test score on income has R² = 0.508; adding Income² raises it to 0.556 (n = 420). Use the homoskedasticity-only F-statistic F = [(R²ᵤ − R²ᵣ)/q] / [(1 − R²ᵤ)/(n − kᵤ − 1)].`,
+   items:[{id:"C6F",label:"F-statistic",ans:45.1,tol:.5},
+          {id:"C6d",label:"Decision at 5% (critical value 3.84)",type:"sel",opts:["Include Income² (reject H₀)","Exclude Income² (do not reject H₀)"],ans:0}],
+   sol:"q = 1, kᵤ = 2: F = 0.048 ÷ (0.444/417) = 45.1 > 3.84, so reject H₀ and include Income²."},
+  {id:"C7", stem:`ln(Earnings)^ = 1.00 + 0.070 Educ − 0.25 Female + 0.020 (Female × Educ).`,
+   items:[{id:"C7m",label:"(a) Return to 1 more year of education, men",unit:"%",ans:7,tol:.05},
+          {id:"C7w",label:"(a) Return to 1 more year of education, women",unit:"%",ans:9,tol:.05},
+          {id:"C7b",label:"(b) Years of education at which the female–male gap is zero",unit:"years",ans:12.5,tol:.05}],
+   sol:"(a) Men 0.070 → 7%; women 0.070 + 0.020 = 0.090 → 9%. (b) −0.25 + 0.020 Educ = 0 → Educ = 12.5."},
+];
+const QC_ITEMS = QC.flatMap(g => g.items);
+const QUIZ_MAX = QA.length + QC_ITEMS.length;
+
+/* ---------- Content helpers ---------- */
+const eq = (s, se) => `<div class="eq">${s}${se?`<span class="se">${se}</span>`:""}</div>`;
+const callout = (title, body, cls="") => `<div class="callout ${cls}"><h4>${title}</h4>${body}</div>`;
+const tbl = (head, rows) => `<div class="tbl"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+const stata = s => `<pre class="stata">${esc(s)}</pre>`;
+const think = (id, q) => callout("Pause and reflect", `<p>${q}</p><textarea data-note="${id}" placeholder="Your thoughts (saved on this device only)"></textarea>`, "think");
+
+function field(item, value, fid){
+  const ctrl = item.type==="sel"
+    ? `<select id="${fid}" data-item="${item.id}"><option value="">Choose…</option>${item.opts.map((o,i)=>`<option value="${i}" ${String(value)===String(i)?"selected":""}>${esc(o)}</option>`).join("")}</select>`
+    : `<input id="${fid}" type="text" inputmode="decimal" data-item="${item.id}" value="${esc(value||"")}" autocomplete="off">`;
+  return `<div class="field" data-field="${item.id}"><label for="${fid}">${item.label}${item.unit?` <span class="unit">(${item.unit})</span>`:""}</label>${ctrl}<span class="mark" aria-live="polite"></span></div>`;
+}
+function activity(key){
+  const a = ACTS[key], saved = (S.acts[key]||{}).vals || {};
+  return `<section class="act" data-act="${key}"><h4>Stop and try: ${a.title}</h4><p>${a.intro}</p>
+    ${a.items.map(it=>field(it, saved[it.id], `act-${key}-${it.id}`)).join("")}
+    <div class="actions"><button class="btn small" data-check="${key}">Check answers</button><button class="btn ghost small" data-sol="${key}">Show solution</button></div>
+    <div class="feedback" aria-live="polite"></div><div class="solution hidden">${a.sol}</div></section>`;
+}
+function unitNav(id){
+  const i = PAGES.findIndex(p=>p.id===id), prev = PAGES[i-1], next = PAGES[i+1];
+  return `<div class="navbtns">${prev?`<button class="btn ghost" data-go="${prev.id}">Back: ${prev.title}</button>`:"<span></span>"}
+    <button class="btn" data-complete="${id}" data-next="${next?next.id:""}">${S.done[id]?"Continue":"Mark complete and continue"}</button></div>`;
+}
+
+/* ---------- Pages ---------- */
+const VIEWS = {
+home(){
+  const name = esc(S.student.name.split(" ")[0]);
+  return `<p class="muted">${esc(COURSE)}</p>
+  <h1>Nonlinear regression functions</h1>
+  <p class="time">Self-instructional material, about 3 hours, can be done in two sittings</p>
+  <p>Welcome, ${name}. This module walks you through why straight lines are not always enough, and how to model curved relationships while still using the regression tools you already know. Each unit has a short activity that checks your answers as you go.</p>
+  <h2>How it works</h2>
+  <ul>
+    <li><b>Pre-check quiz</b> and <b>Practice quiz</b> are marked and recorded for your lecturer.</li>
+    <li><b>Activities</b> inside each unit are for practice. They check your answers instantly but are not recorded.</li>
+    <li>Your progress is saved on this device. Use the same matric number to continue later on this browser.</li>
+  </ul>
+  <h2>Learning outcomes</h2>
+  <ol>
+    <li>Describe a strategy for modelling nonlinear regression functions.</li>
+    <li>Explain and interpret nonlinear functions of a single independent variable.</li>
+    <li>Interpret interactions between independent variables.</li>
+    <li>Identify regression functions that are nonlinear in parameters.</li>
+  </ol>
+  <h2>Study plan</h2>
+  ${tbl(["Part","Topic","Time"], PAGES.filter(p=>p.t).map(p=>[p.n?`Unit ${p.n}`:"", p.title, p.t]))}
+  <p class="muted">Bring a calculator with ln and e<sup>x</sup>. Examples use the California test score data (420 school districts) from the lecture, adapted from Stock &amp; Watson.</p>
+  <div class="navbtns"><span></span><button class="btn" data-go="pre">Start the pre-check quiz</button></div>`;
+},
+
+pre(){
+  const done = S.pre && S.pre.submitted;
+  return `<h1>Pre-check quiz</h1><p class="time">10 minutes, 5 questions, recorded</p>
+  <p>A quick warm-up. If you score below 3, revise multiple regression and logarithms before Unit 1.</p>
+  <div class="card ${done?"locked":""}" id="preForm">${PRE.map((q,i)=>mcqHTML("P"+(i+1), q, done?S.pre.answers[i]:null, done)).join("")}</div>
+  ${done ? `<div class="card"><div class="score"><b>${S.pre.score}/${PRE.length}</b><span class="muted">your pre-check score</span></div>${syncLine("pre")}</div>
+    <div class="navbtns"><span></span><button class="btn" data-go="u1">Go to Unit 1</button></div>`
+  : `<div class="actions"><button class="btn" id="preSubmit">Submit pre-check</button></div><p class="err hidden" id="preErr"></p>`}`;
+},
+
+u1(){ return `<p class="muted">Unit 1</p><h1>Why nonlinear regression?</h1><p class="time">15 minutes</p>
+  <p>So far our regression functions have been <i>linear in the X's</i>: a one-unit change in X changes Y by β<sub>1</sub>, whatever the starting value of X. But in the lecture's scatterplot, test scores rise quickly with income in poorer districts and flatten out in richer ones. A straight line cannot capture that.</p>
+  <p>When the relationship between Y and X is nonlinear:</p>
+  <ul><li>The effect on Y of a change in X depends on the value of X. The <b>marginal effect is not constant</b>.</li>
+  <li>A linear regression is <b>mis-specified</b>: the functional form is wrong.</li>
+  <li>The OLS estimate of the effect is <b>biased</b>, not even right on average.</li>
+  <li>The solution is to estimate a regression function that is nonlinear in X.</li></ul>
+  <h2>The general nonlinear regression function</h2>
+  ${eq(`<i>Y<sub>i</sub></i> = <i>f</i>(<i>X</i><sub>1i</sub>, <i>X</i><sub>2i</sub>, …, <i>X<sub>ki</sub></i>) + <i>u<sub>i</sub></i>`)}
+  <p>The least squares assumptions carry over: E(u<sub>i</sub> | X's) = 0, so <i>f</i> is the conditional expectation of Y; observations are i.i.d.; large outliers are rare; no perfect multicollinearity.</p>
+  ${callout("Key idea: the “before and after” rule", `<p>The expected change in Y from a change in X<sub>1</sub>, holding the other X's constant, is the regression function <b>after</b> the change minus the function <b>before</b>:</p>${eq(`Δ<i>Y</i> = <i>f</i>(<i>X</i><sub>1</sub> + Δ<i>X</i><sub>1</sub>, <i>X</i><sub>2</sub>, …) − <i>f</i>(<i>X</i><sub>1</sub>, <i>X</i><sub>2</sub>, …)`)}<p>Every interpretation in this module comes from this one rule.</p>`)}
+  <p>Two approaches for a single X come next: <b>polynomials</b> (Unit 2) and <b>logarithms</b> (Unit 3).</p>
+  ${activity("u1")}${unitNav("u1")}`; },
+
+u2(){ return `<p class="muted">Unit 2</p><h1>Polynomials in X</h1><p class="time">30 minutes</p>
+  ${eq(`<i>Y<sub>i</sub></i> = β<sub>0</sub> + β<sub>1</sub><i>X<sub>i</sub></i> + β<sub>2</sub><i>X<sub>i</sub></i><sup>2</sup> + … + β<sub>r</sub><i>X<sub>i</sub><sup>r</sup></i> + <i>u<sub>i</sub></i>`)}
+  <p>This is the ordinary multiple regression model with powers of X as regressors. It is still <b>linear in the parameters</b>, so OLS, t-tests and F-tests work as before. Individual coefficients are hard to interpret, but the function as a whole is not.</p>
+  <h2>Worked example: quadratic TestScore–Income</h2>
+  <p>Income is average district income in $000 per capita (n = 420, robust SEs).</p>
+  ${stata("generate avginc2 = avginc*avginc\nreg testscr avginc avginc2, r")}
+  ${eq(`TestScore^ = 607.3 + 3.851 Income − 0.0423 Income<sup>2</sup>,   R<sup>2</sup> = 0.556`, "(2.90)       (0.268)            (0.0048)")}
+  <p><b>Is the relationship linear?</b> Test H<sub>0</sub>: β<sub>2</sub> = 0. t = −0.0423/0.0048 = −8.85, so linearity is rejected at 1%.</p>
+  <h2>Explore the fitted curves</h2>
+  <p>Move the slider to choose a starting income. The readout shows the predicted effect of a $1,000 increase from that point. Notice how the effect shrinks as income rises, and what the quadratic does beyond about 45.</p>
+  ${explorerHTML()}
+  ${tbl(["Change in Income ($000)","Predicted ΔTestScore (quadratic)"], [["5 → 6","3.4"],["25 → 26","1.7"],["45 → 46","0.0"]])}
+  ${callout("Caution: do not extrapolate", `<p>What is the effect of moving from 65 to 66? The quadratic turns downward after about 45.5, so it predicts scores <i>fall</i> with income. Very few districts are that rich, so the data cannot support that prediction.</p>`, "warn")}
+  <h2>The cubic specification</h2>
+  ${stata("gen avginc3 = avginc*avginc2\nreg testscr avginc avginc2 avginc3, r\ntest avginc2 avginc3")}
+  ${eq(`TestScore^ = 600.1 + 5.02 Income − 0.0958 Income<sup>2</sup> + 0.000686 Income<sup>3</sup>`, "(5.10)      (0.71)          (0.029)              (0.00035)")}
+  <p>Testing linearity against a polynomial of degree up to 3 means H<sub>0</sub>: β<sub>2</sub> = β<sub>3</sub> = 0, a <b>joint</b> hypothesis: F(2, 416) = 37.69, p &lt; 0.001. Linearity is rejected. The cubic term alone has t = 1.98 (p = 0.049), only just significant at 5%.</p>
+  ${callout("Key idea: polynomial regression", `<ul><li>Estimate by OLS after creating X<sup>2</sup>, X<sup>3</sup>, …</li><li>Interpret by plotting predicted values or computing ΔY at several X values.</li><li>Test the degree with t-tests (highest term) or F-tests (blocks of terms).</li></ul>`)}
+  ${activity("u2")}${unitNav("u2")}`; },
+
+u3(){ return `<p class="muted">Unit 3</p><h1>Logarithmic functions of Y and/or X</h1><p class="time">35 minutes</p>
+  <p>Logs let us model relationships in <b>percentage</b> terms. For small changes:</p>
+  ${eq(`ln(<i>X</i> + Δ<i>X</i>) − ln(<i>X</i>) ≅ Δ<i>X</i> / <i>X</i>`)}
+  <p>So 100 × Δln(X) is approximately the percentage change in X.</p>
+  <h2>The three log specifications</h2>
+  ${tbl(["Case","Regression function","Interpretation of β<sub>1</sub>"], [
+    ["I. Linear-log","Y = β<sub>0</sub> + β<sub>1</sub>ln(X) + u","1% ↑ X → 0.01β<sub>1</sub> unit change in Y"],
+    ["II. Log-linear","ln(Y) = β<sub>0</sub> + β<sub>1</sub>X + u","1 unit ↑ X → 100β<sub>1</sub>% change in Y"],
+    ["III. Log-log","ln(Y) = β<sub>0</sub> + β<sub>1</sub>ln(X) + u","1% ↑ X → β<sub>1</sub>% change in Y (elasticity)"]])}
+  <h3>I. Linear-log</h3>
+  ${eq(`Δ<i>Y</i> = β<sub>1</sub>[ln(<i>X</i> + Δ<i>X</i>) − ln(<i>X</i>)] ≅ β<sub>1</sub>(Δ<i>X</i>/<i>X</i>)`)}
+  ${eq(`TestScore^ = 557.8 + 36.42 ln(Income)`, "(3.8)       (1.40)")}
+  <p>A 1% rise in income is associated with a 0.01 × 36.42 = <b>0.36-point</b> rise in test score.</p>
+  <h3>II. Log-linear</h3>
+  ${eq(`ln(<i>Y</i> + Δ<i>Y</i>) − ln(<i>Y</i>) = β<sub>1</sub>Δ<i>X</i>  ⇒  Δ<i>Y</i>/<i>Y</i> ≅ β<sub>1</sub>Δ<i>X</i>`)}
+  <p>With ln(TestScore)^ = 6.439 + 0.00284 Income, a $1,000 rise in income is associated with a 0.284% rise in test scores.</p>
+  <h3>III. Log-log</h3>
+  ${eq(`β<sub>1</sub> ≅ (Δ<i>Y</i>/<i>Y</i>) / (Δ<i>X</i>/<i>X</i>)`)}
+  ${eq(`ln(TestScore)^ = 6.336 + 0.0554 ln(Income)`, "(0.006)      (0.0021)")}
+  <p>A 10% rise in income (e.g. $10,000 to $11,000) gives about 0.0554 × 10 = 0.554% higher scores; at 650 that is about <b>3.6 points</b>.</p>
+  <h2>Approximate vs exact percentage change</h2>
+  <p>The approximation 100 × Δln(Y) works for small changes only. The exact change is 100 × (e<sup>Δln Y</sup> − 1). Drag to see when the approximation breaks down.</p>
+  <div class="explorer" id="pctCalc"><div class="ctrl"><label for="pctSlider">Δln(Y) = <b id="pctVal">0.10</b></label><input type="range" id="pctSlider" min="-0.6" max="0.6" step="0.01" value="0.10"></div>
+    <div class="readout"><div>Approximate % change<b id="pctApprox">10.0%</b></div><div>Exact % change<b id="pctExact">10.5%</b></div><div>Gap<b id="pctGap">0.5 pts</b></div></div></div>
+  ${callout("Key idea: comparing specifications", `<p>You <b>cannot compare R<sup>2</sup></b> between models with different dependent variables (Y vs ln Y). Choose using judgment about the interpretation, hypothesis tests and plots of predicted values.</p>`)}
+  ${think("u3", "A colleague says: “The log-log model has a higher R² than the linear-log model, so it must be better.” What is wrong with this argument?")}
+  ${activity("u3")}${unitNav("u3")}`; },
+
+u4(){ return `<p class="muted">Unit 4</p><h1>Models nonlinear in parameters</h1><p class="time">10 minutes</p>
+  <p>A polynomial can predict that test scores <i>fall</i> with income, and the linear-log model lets them rise <i>without bound</i>. The <b>negative exponential growth curve</b> always rises but approaches a maximum:</p>
+  ${eq(`<i>Y<sub>i</sub></i> = β<sub>0</sub>[1 − e<sup>−β<sub>1</sub>(<i>X<sub>i</sub></i> − β<sub>2</sub>)</sup>] + <i>u<sub>i</sub></i>`)}
+  <p>β<sub>0</sub> is the asymptote as X → ∞. The model is <b>not linear in the parameters</b>, so OLS cannot estimate it, even after transforming variables.</p>
+  <h2>Nonlinear least squares (NLS)</h2>
+  <p>NLS picks the parameters that minimise the sum of squared residuals. Software starts from initial guesses and iterates (“hill-climbing”) until the SSR stops falling. In the lecture, Stata's SSR fell from 1.8 × 10<sup>8</sup> to 66,988 in eight iterations.</p>
+  ${stata("nl (testscr = {b0=720}*(1 - exp(-1*{b1}*(avginc-{b2})))), r")}
+  ${eq(`TestScore^ = 703.2[1 − e<sup>−0.0552(Income + 34.0)</sup>]`, "(4.44)        (0.0068)        (4.48)")}
+  <p>The estimated maximum score is about 703. Its RMSE (12.675) is close to, but slightly worse than, the linear-log model (12.618): the more complex model does not fit better here.</p>
+  ${activity("u4")}${unitNav("u4")}`; },
+
+u5(){ return `<p class="muted">Unit 5</p><h1>Interactions between independent variables</h1><p class="time">35 minutes</p>
+  <p>Perhaps smaller classes help more where there are many English learners. When the effect of one regressor depends on another, we add an <b>interaction term</b>: the product of the two.</p>
+  <h2>Two binary variables</h2>
+  ${eq(`<i>Y</i> = β<sub>0</sub> + β<sub>1</sub><i>D</i><sub>1</sub> + β<sub>2</sub><i>D</i><sub>2</sub> + β<sub>3</sub>(<i>D</i><sub>1</sub> × <i>D</i><sub>2</sub>) + <i>u</i>`)}
+  <p>Effect of D<sub>1</sub> = β<sub>1</sub> + β<sub>3</sub>D<sub>2</sub>, so <b>β<sub>3</sub> is the extra effect of D<sub>1</sub> when D<sub>2</sub> = 1</b>.</p>
+  <p>Example with HiSTR = 1 if STR ≥ 20 and HiEL = 1 if PctEL ≥ 10:</p>
+  ${eq(`TestScore^ = 664.1 − 18.2 HiEL − 1.9 HiSTR − 3.5 (HiSTR × HiEL)`, "(1.4)       (2.3)          (1.9)            (3.1)")}
+  <p>Effect of HiSTR is −1.9 when HiEL = 0 and −1.9 − 3.5 = −5.4 when HiEL = 1. The interaction is not significant (t = 3.5/3.1 = 1.13).</p>
+  ${activity("u5a")}
+  <h2>A binary and a continuous variable</h2>
+  ${eq(`<i>Y</i> = β<sub>0</sub> + β<sub>1</sub><i>D</i> + β<sub>2</sub><i>X</i> + β<sub>3</sub>(<i>D</i> × <i>X</i>) + <i>u</i>`)}
+  <p>This gives two lines: D = 0: Y = β<sub>0</sub> + β<sub>2</sub>X, and D = 1: Y = (β<sub>0</sub> + β<sub>1</sub>) + (β<sub>2</sub> + β<sub>3</sub>)X. β<sub>1</sub> shifts the <b>intercept</b>; β<sub>3</sub> shifts the <b>slope</b>.</p>
+  ${eq(`TestScore^ = 682.2 − 0.97 STR + 5.6 HiEL − 1.28 (STR × HiEL)`, "(11.9)     (0.59)       (19.5)          (0.97)")}
+  <div class="explorer">${linesSVG()}<div class="legend"><span><span class="sw" style="background:var(--accent)"></span> HiEL = 0: 682.2 − 0.97 STR</span><span><span class="sw" style="background:var(--gold)"></span> HiEL = 1: 687.8 − 2.25 STR</span></div></div>
+  ${tbl(["Hypothesis","Test","Result"], [["Same slope (β<sub>3</sub> = 0)","t = −1.28/0.97 = −1.32","Do not reject at 5%"],["Same intercept (β<sub>1</sub> = 0)","t = 5.6/19.5 = 0.29","Do not reject at 5%"],["Same line (β<sub>1</sub> = β<sub>3</sub> = 0)","F = 89.94","Reject, p &lt; 0.001"]])}
+  ${think("u5", "How can the two coefficients be individually insignificant but jointly highly significant? Hint: think about how HiEL and STR × HiEL are correlated.")}
+  <h2>Two continuous variables</h2>
+  ${eq(`<i>Y</i> = β<sub>0</sub> + β<sub>1</sub><i>X</i><sub>1</sub> + β<sub>2</sub><i>X</i><sub>2</sub> + β<sub>3</sub>(<i>X</i><sub>1</sub> × <i>X</i><sub>2</sub>) + <i>u</i>`)}
+  <p>ΔY/ΔX<sub>1</sub> = β<sub>1</sub> + β<sub>3</sub>X<sub>2</sub>, so <b>β<sub>3</sub> is the change in the effect of X<sub>1</sub> per unit of X<sub>2</sub></b>.</p>
+  ${eq(`TestScore^ = 686.3 − 1.12 STR − 0.67 PctEL + 0.0012 (STR × PctEL)`, "(11.8)     (0.59)      (0.37)            (0.019)")}
+  ${tbl(["PctEL","ΔTestScore/ΔSTR"], [["0","−1.12"],["20%","−1.12 + 0.0012 × 20 = −1.10"]])}
+  <p>The interaction is tiny and insignificant (t = 0.06); the STR coefficient has t = −1.90, not significant at 5% on its own.</p>
+  ${activity("u5b")}${unitNav("u5")}`; },
+
+u6(){ return `<p class="muted">Unit 6</p><h1>Application: choosing a specification</h1><p class="time">10 minutes</p>
+  <p>The lecture uses these tools to ask two policy questions about the student-teacher ratio (STR):</p>
+  <ol><li>Are there nonlinear effects of class size reduction? Does cutting STR from 35 to 30 have the same effect as from 20 to 15?</li>
+  <li>Do PctEL and STR interact? Are small classes more effective with many English learners?</li></ol>
+  <h2>Strategy</h2>
+  <ul><li>Estimate linear and nonlinear functions of STR, controlling for PctEL, ln(Income) and the share on subsidised lunch. ln(Income) behaves better at the extremes of the income range.</li>
+  <li>Ask whether nonlinear terms make an <b>economically important</b> difference, not just a statistically significant one.</li>
+  <li>Test nonlinear terms jointly with F-tests.</li>
+  <li>If STR enters as a cubic, interact HiEL with <b>every</b> term (HiEL×STR, HiEL×STR², HiEL×STR³) so the whole function can differ.</li></ul>
+  ${think("u6", "Using Table 8.3 and the joint tests in the lecture slides, write one sentence answering each question. Say whether the evidence is statistically significant and whether the effect is large enough to matter for policy.")}
+  <h2>Summary</h2>
+  ${tbl(["Model","Effect of a change in X","Estimation"], [
+    ["Polynomial","Compute ΔŶ at chosen X values","OLS"],["Linear-log","1% ↑ X → 0.01β<sub>1</sub> units Y","OLS"],["Log-linear","1 unit ↑ X → 100β<sub>1</sub>% Y","OLS"],
+    ["Log-log","1% ↑ X → β<sub>1</sub>% Y","OLS"],["Binary × binary","Effect of D<sub>1</sub> = β<sub>1</sub> + β<sub>3</sub>D<sub>2</sub>","OLS"],
+    ["Binary × continuous","Effect of X = β<sub>2</sub> + β<sub>3</sub>D","OLS"],["Continuous × continuous","Effect of X<sub>1</sub> = β<sub>1</sub> + β<sub>3</sub>X<sub>2</sub>","OLS"],
+    ["Negative exponential","Rises toward asymptote β<sub>0</sub>","NLS"]])}
+  ${callout("Key idea", `<p>Functions such as X<sup>2</sup>, ln(X) or X<sub>1</sub>×X<sub>2</sub> turn many nonlinear relationships into a multiple regression. Estimation and inference are unchanged; interpretation always comes from comparing predicted Y before and after the change.</p>`)}
+  ${unitNav("u6")}`; },
+
+quiz(){
+  const q = S.quiz, sub = q && q.submitted;
+  const ans = (q && q.answers) || {};
+  const done = Object.keys(S.done).filter(k=>/^u\d$/.test(k)).length;
+  return `<h1>Practice quiz</h1><p class="time">30 minutes, ${QUIZ_MAX} marks, recorded</p>
+  ${sub ? `<div class="card"><div class="score"><b>${q.score}/${QUIZ_MAX}</b><span class="muted">${Math.round(q.score/QUIZ_MAX*100)}%, attempt ${q.attempt} (Section A ${q.scoreA}/${QA.length}, Section C ${q.scoreC}/${QC_ITEMS.length})</span></div>${syncLine("quiz")}
+      <p class="muted" style="margin:12px 0 0">Correct answers are marked below with explanations and worked solutions.</p></div>` : `<p>Section A is theory, Section C is applied. Section B is written; it is sent to your lecturer but not auto-marked. Enter numbers without units (e.g. −6.5, not −6.5%). Small rounding differences are accepted.</p>
+  ${done<6?`<div class="callout warn"><h4>Before you start</h4><p>You have completed ${done} of 6 units. You can still attempt the quiz, but it assumes you have done the activities.</p></div>`:""}`}
+  <h2>Section A: Theory (${QA.length} marks)</h2>
+  <div class="card ${sub?"locked":""}">${QA.map((x,i)=>mcqHTML(x.id, x, ans[x.id], sub)).join("")}</div>
+  <h2>Section B: Short answer (not auto-marked)</h2>
+  <div class="card">${QB.map(x=>`<div class="q"><div class="qstem"><span class="n">${x.id}</span>${x.q}</div>
+    <textarea data-qb="${x.id}" ${sub?"readonly":""} placeholder="Write your answer">${esc(ans[x.id]||"")}</textarea>
+    ${sub?`<div class="solution"><p><b>Model answer:</b> ${x.m}</p></div>`:""}</div>`).join("")}</div>
+  <h2>Section C: Applied (${QC_ITEMS.length} marks)</h2>
+  ${QC.map(g=>`<div class="card"><div class="qstem"><span class="n">${g.id}</span>${g.stem}</div>
+    ${g.items.map(it=>field(it, ans[it.id], "qc-"+it.id)).join("")}
+    ${sub?`<div class="solution"><p><b>Solution:</b> ${g.sol}</p></div>`:""}</div>`).join("")}
+  ${sub ? `<div class="card"><div class="actions" style="margin-top:0"><button class="btn ghost" id="quizRetry">Try again (new attempt)</button><button class="btn" data-go="results">See my results</button></div></div>`
+        : `<div class="actions"><button class="btn" id="quizSubmit">Submit quiz</button></div>`}`;
+},
+
+results(){
+  const units = PAGES.filter(p=>p.n).map(p=>[`Unit ${p.n}: ${p.title}`, S.done[p.id]?"Completed":"Not yet"]);
+  return `<h1>My results</h1><p class="time">${esc(S.student.name)}, ${esc(S.student.matric)}${S.student.group?", "+esc(S.student.group):""}</p>
+  ${tbl(["Component","Score","Status"], [
+    ["Pre-check quiz", S.pre&&S.pre.submitted?`${S.pre.score}/${PRE.length}`:"–", S.pre&&S.pre.submitted?syncText("pre"):"Not attempted"],
+    ["Practice quiz", S.quiz&&S.quiz.submitted?`${S.quiz.score}/${QUIZ_MAX} (attempt ${S.quiz.attempt})`:"–", S.quiz&&S.quiz.submitted?syncText("quiz"):"Not attempted"]])}
+  <h2>Units</h2>${tbl(["Unit","Status"], units)}
+  ${S.outbox.length?`<div class="status wait">${S.outbox.length} record(s) waiting to be sent. Keep this page open while online, or press the button below.</div><div class="actions"><button class="btn small" id="retrySend">Send now</button></div>`:""}`;
+},
+};
+
+/* ---------- MCQ ---------- */
+function mcqHTML(id, q, chosen, locked){
+  return `<div class="q" data-q="${id}"><div class="qstem"><span class="n">${id}</span>${q.q}</div><div class="opts" role="radiogroup">
+    ${q.o.map((o,i)=>{
+      let cls = "";
+      if (locked){ if (i===q.a) cls="right"; else if (String(chosen)===String(i)) cls="wrong"; }
+      return `<label class="opt ${cls}"><input type="radio" name="${id}" value="${i}" ${String(chosen)===String(i)?"checked":""} ${locked?"disabled":""}><span>${esc(o)}</span></label>`;
+    }).join("")}</div>${locked?`<p class="explain">${q.e}</p>`:""}</div>`;
+}
+
+/* ---------- Explorer (Unit 2) ---------- */
+const FX = {
+  quad: x => 607.3017 + 3.850995*x - .0423085*x*x,
+  cubic: x => 600.079 + 5.018677*x - .0958052*x*x + .0006855*x*x*x,
+  llog: x => 557.8 + 36.42*Math.log(x),
+};
+const COLORS = {quad:"var(--accent)", cubic:"var(--gold)", llog:"var(--bad)"};
+const XR=[5,60], YR=[620,720], PW=640, PH=320, PAD={l:48,r:16,t:14,b:36};
+const sx = x => PAD.l + (x-XR[0])/(XR[1]-XR[0])*(PW-PAD.l-PAD.r);
+const sy = y => PH-PAD.b - (y-YR[0])/(YR[1]-YR[0])*(PH-PAD.t-PAD.b);
+function path(f){ let d=""; for(let x=XR[0]; x<=XR[1]+1e-9; x+=.5){ const y=Math.max(YR[0],Math.min(YR[1],f(x))); d+=(d?"L":"M")+sx(x).toFixed(1)+","+sy(y).toFixed(1); } return d; }
+function explorerHTML(){
+  let grid="";
+  for(let y=620;y<=720;y+=20) grid+=`<line x1="${PAD.l}" x2="${PW-PAD.r}" y1="${sy(y)}" y2="${sy(y)}" stroke="var(--line)"/><text x="${PAD.l-8}" y="${sy(y)+4}" text-anchor="end" font-size="13" fill="var(--muted)">${y}</text>`;
+  for(let x=10;x<=60;x+=10) grid+=`<text x="${sx(x)}" y="${PH-PAD.b+18}" text-anchor="middle" font-size="13" fill="var(--muted)">${x}</text>`;
+  const curves = Object.keys(FX).map(k=>`<path data-curve="${k}" d="${path(FX[k])}" fill="none" stroke="${COLORS[k]}" stroke-width="2.5"/>`).join("");
+  return `<div class="explorer"><svg viewBox="0 0 ${PW} ${PH}" role="img" aria-label="Fitted test score against district income for quadratic, cubic and linear-log models">
+    <rect x="${sx(55)}" y="${PAD.t}" width="${sx(60)-sx(55)}" height="${PH-PAD.t-PAD.b}" fill="var(--bad-soft)"/>
+    <text x="${sx(57.5)}" y="${PAD.t+14}" text-anchor="middle" font-size="12" fill="var(--bad)">few data</text>
+    ${grid}${curves}
+    <line id="exLine" x1="0" x2="0" y1="${PAD.t}" y2="${PH-PAD.b}" stroke="var(--ink)" stroke-dasharray="4 4"/>
+    <text x="${(PW+PAD.l)/2}" y="${PH-4}" text-anchor="middle" font-size="13" fill="var(--muted)">District income ($000 per capita)</text></svg>
+    <div class="legend">${Object.keys(FX).map(k=>`<label><input type="checkbox" data-toggle="${k}" checked><span class="sw" style="background:${COLORS[k]}"></span>${{quad:"Quadratic",cubic:"Cubic",llog:"Linear-log"}[k]}</label>`).join("")}</div>
+    <div class="ctrl"><label for="exSlider">Income = <b id="exX">10</b></label><input type="range" id="exSlider" min="5" max="59" step="1" value="10"></div>
+    <div class="readout"><div>Quadratic: effect of +1<b id="exQ"></b></div><div>Cubic: effect of +1<b id="exC"></b></div><div>Linear-log: effect of +1<b id="exL"></b></div></div></div>`;
+}
+function bindExplorer(){
+  const s = $("#exSlider"); if (!s) return;
+  const upd = () => {
+    const x = +s.value; $("#exX").textContent = x;
+    const l = $("#exLine"); l.setAttribute("x1", sx(x)); l.setAttribute("x2", sx(x));
+    const d = f => { const v = f(x+1)-f(x); return (v>=0?"+":"−")+Math.abs(v).toFixed(2); };
+    $("#exQ").textContent = d(FX.quad); $("#exC").textContent = d(FX.cubic); $("#exL").textContent = d(FX.llog);
+  };
+  s.addEventListener("input", upd); upd();
+  $$("[data-toggle]").forEach(cb => cb.addEventListener("change", () => { $(`[data-curve="${cb.dataset.toggle}"]`).style.display = cb.checked ? "" : "none"; }));
+}
+function linesSVG(){
+  const X=[14,26], Y=[620,680], w=640, h=260, p={l:48,r:16,t:12,b:34};
+  const fx = x => p.l + (x-X[0])/(X[1]-X[0])*(w-p.l-p.r), fy = y => h-p.b - (y-Y[0])/(Y[1]-Y[0])*(h-p.t-p.b);
+  let g=""; for(let y=620;y<=680;y+=10) g+=`<line x1="${p.l}" x2="${w-p.r}" y1="${fy(y)}" y2="${fy(y)}" stroke="var(--line)"/><text x="${p.l-8}" y="${fy(y)+4}" text-anchor="end" font-size="13" fill="var(--muted)">${y}</text>`;
+  for(let x=14;x<=26;x+=2) g+=`<text x="${fx(x)}" y="${h-p.b+18}" text-anchor="middle" font-size="13" fill="var(--muted)">${x}</text>`;
+  const ln = (a,b,c) => `<line x1="${fx(14)}" y1="${fy(a+b*14)}" x2="${fx(26)}" y2="${fy(a+b*26)}" stroke="${c}" stroke-width="2.5"/>`;
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Two regression lines of test score on student-teacher ratio, steeper for high English learner districts">${g}${ln(682.2,-.97,"var(--accent)")}${ln(687.8,-2.25,"var(--gold)")}<text x="${(w+p.l)/2}" y="${h-2}" text-anchor="middle" font-size="13" fill="var(--muted)">Student-teacher ratio (STR)</text></svg>`;
+}
+function bindPct(){
+  const s = $("#pctSlider"); if (!s) return;
+  const upd = () => { const b = +s.value, ap = 100*b, ex = 100*(Math.exp(b)-1);
+    $("#pctVal").textContent = b.toFixed(2); $("#pctApprox").textContent = ap.toFixed(1)+"%";
+    $("#pctExact").textContent = ex.toFixed(1)+"%"; $("#pctGap").textContent = Math.abs(ex-ap).toFixed(1)+" pts"; };
+  s.addEventListener("input", upd); upd();
+}
+
+/* =====================================================================
+   RECORDING TO GOOGLE SHEETS
+   ===================================================================== */
+const sending = { busy:false };
+function enqueue(record){ S.outbox.push(record); persist(); flush(); }
+let lastError = "";
+const DB_READY = () => /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(SUPABASE_URL.trim()) && SUPABASE_KEY.length > 20 && !/PASTE_/.test(SUPABASE_KEY);
+function toRow(r){
+  return { name:r.name, matric:r.matric, grp:r.group||null, component:r.component, attempt:r.attempt||1,
+    score:r.score, max_score:r.max, percent:Math.round(r.score/r.max*1000)/10,
+    section_a: r.scoreA==null?null:r.scoreA, section_c: r.scoreC==null?null:r.scoreC,
+    units_completed:r.unitsCompleted||"", minutes_spent:r.minutesSpent||0,
+    b1:r.B1||null, b2:r.B2||null, b3:r.B3||null, b4:r.B4||null, answers:r.answers||{} };
+}
+async function flush(){
+  if (sending.busy || !S || !S.outbox.length) return;
+  if (!DB_READY()) { lastError = "The database link in the app is missing or incomplete."; refreshSync(); return; }
+  sending.busy = true;
+  const key = SUPABASE_KEY.trim();
+  const headers = { "apikey": key, "Content-Type":"application/json", "Prefer":"return=minimal" };
+  if (!key.startsWith("sb_")) headers["Authorization"] = "Bearer " + key;   // legacy anon key
+  try{
+    while (S.outbox.length){
+      const rec = S.outbox[0];
+      const res = await fetch(SUPABASE_URL.trim().replace(/\/$/,"") + "/rest/v1/attempts", { method:"POST", headers, body: JSON.stringify(toRow(rec)) });
+      if (!res.ok){
+        const out = await res.json().catch(()=>({}));
+        lastError = `The database rejected the record (${res.status}): ${out.message || out.hint || "unknown reason"}`;
+        throw new Error(lastError);
+      }
+      S.outbox.shift(); lastError = "";
+      if (rec.component==="Pre-check") S.pre.synced = true;
+      if (rec.component==="Practice quiz" && S.quiz && S.quiz.attempt===rec.attempt) S.quiz.synced = true;
+      persist();
+    }
+  }catch(e){ if (!lastError) lastError = navigator.onLine ? "Could not reach the database." : "You are offline."; }
+  sending.busy = false; refreshSync();
+}
+function syncText(kind){
+  const o = kind==="pre" ? S.pre : S.quiz;
+  return o && o.synced ? "Recorded" : "Waiting to send";
+}
+function syncLine(kind){
+  const o = kind==="pre" ? S.pre : S.quiz;
+  if (o && o.synced) return `<div class="status ok" data-sync="${kind}">Your marks have been recorded.</div>`;
+  const cfg = DB_READY();
+  if (!cfg) return `<div class="status wait" data-sync="${kind}">Recording is not set up yet. Ask your lecturer to add the database link.</div>`;
+  return `<div class="status wait" data-sync="${kind}">Sending your marks. If you are offline, they will be sent automatically when you reconnect. Do not clear your browser data until this says recorded.${lastError?`<br><small>Problem: ${esc(lastError)}</small>`:""}</div>`;
+}
+function refreshSync(){
+  $$("[data-sync]").forEach(el => { el.outerHTML = syncLine(el.dataset.sync); });
+  const side = $("#sideSync");
+  if (side) side.textContent = S.outbox.length ? `${S.outbox.length} record(s) waiting to send` : "All marks recorded";
+  if (current==="results") render();
+}
+function baseRecord(component){
+  return { name:S.student.name, matric:S.student.matric, group:S.student.group||"", component,
+    unitsCompleted: PAGES.filter(p=>p.n && S.done[p.id]).map(p=>p.n).join(","),
+    minutesSpent: Math.round((Date.now()-S.startedAt)/60000), clientTime:new Date().toISOString() };
+}
+
+/* =====================================================================
+   RENDER & EVENTS
+   ===================================================================== */
+const root = $("#root");
+function render(){
+  if (!S) return renderLogin();
+  const total = PAGES.filter(p=>p.n).length, done = PAGES.filter(p=>p.n && S.done[p.id]).length;
+  root.innerHTML = `<div class="topbar"><button id="menuBtn" aria-controls="side" aria-expanded="false">Menu</button><span>${esc((PAGES.find(p=>p.id===current)||{}).title||"")}</span></div>
+  <div class="shell"><aside class="side" id="side">
+    <div class="course">${esc(COURSE)}</div><h1>Nonlinear regression functions</h1>
+    <div class="who"><b>${esc(S.student.name)}</b>${esc(S.student.matric)}${S.student.group?", "+esc(S.student.group):""}<br><button id="logout">Not you? Switch student</button></div>
+    <nav aria-label="Module sections"><ul class="nav">${PAGES.map((p,i)=>{
+      const isDone = p.n ? S.done[p.id] : (p.id==="pre" ? S.pre&&S.pre.submitted : p.id==="quiz" ? S.quiz&&S.quiz.submitted : false);
+      const dot = p.n ? (isDone?"✓":p.n) : (isDone?"✓":"");
+      const sep = (p.id==="u1"||p.id==="quiz") ? `<li class="navsep" aria-hidden="true"></li>` : "";
+      return `${sep}<li class="${isDone?"done":""}"><button data-go="${p.id}" ${p.id===current?'aria-current="page"':""}><span class="dot">${dot}</span><span>${p.title}</span><span class="t">${p.t}</span></button></li>`;
+    }).join("")}</ul></nav>
+    <div class="progress">${done} of ${total} units complete<div class="bar"><i style="width:${done/total*100}%"></i></div></div>
+    <div class="sync" id="sideSync">${S.outbox.length?`${S.outbox.length} record(s) waiting to send`:""}</div>
+  </aside>
+  <main><div class="page" id="page">${VIEWS[current]()}</div></main></div>`;
+  bindPage();
+}
+
+function go(id){ current = id; S.last = id; persist(); render(); window.scrollTo(0,0); const m=$("main"); if(m) m.focus && m.focus(); }
+
+function bindPage(){
+  $$("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
+  const menu = $("#menuBtn"), side = $("#side");
+  if (menu) menu.addEventListener("click", e => { e.stopPropagation(); const open = side.classList.toggle("open"); menu.setAttribute("aria-expanded", open); });
+  document.addEventListener("click", e => { if (side && side.classList.contains("open") && !side.contains(e.target) && e.target!==menu) side.classList.remove("open"); }, { once:true });
+  $("#logout").addEventListener("click", () => { persist(); S = null; save(KEY+":current", null); render(); });
+
+  // Activities
+  $$("[data-check]").forEach(b => b.addEventListener("click", () => checkActivity(b.dataset.check)));
+  $$("[data-sol]").forEach(b => b.addEventListener("click", () => {
+    const box = $(`[data-act="${b.dataset.sol}"] .solution`); box.classList.toggle("hidden");
+    b.textContent = box.classList.contains("hidden") ? "Show solution" : "Hide solution";
+  }));
+  $$("[data-act] [data-item]").forEach(inp => inp.addEventListener("input", () => {
+    const key = inp.closest("[data-act]").dataset.act;
+    S.acts[key] = S.acts[key] || {vals:{}}; S.acts[key].vals[inp.dataset.item] = inp.value; persist();
+  }));
+  // Notes
+  $$("[data-note]").forEach(t => { t.value = S.notes[t.dataset.note] || ""; t.addEventListener("input", () => { S.notes[t.dataset.note] = t.value; persist(); }); });
+  // Complete unit
+  $$("[data-complete]").forEach(b => b.addEventListener("click", () => { S.done[b.dataset.complete] = true; persist(); go(b.dataset.next || "quiz"); }));
+
+  bindExplorer(); bindPct();
+
+  // Pre-check
+  const ps = $("#preSubmit");
+  if (ps) ps.addEventListener("click", () => {
+    const answers = PRE.map((_,i) => { const c = $(`input[name="P${i+1}"]:checked`); return c ? +c.value : null; });
+    if (answers.some(a=>a===null)){ const e=$("#preErr"); e.textContent="Answer all 5 questions before submitting."; e.classList.remove("hidden"); return; }
+    const score = answers.reduce((s,a,i)=>s+(a===PRE[i].a?1:0),0);
+    S.preAttempts++; S.pre = { submitted:true, answers, score, synced:false };
+    enqueue({ ...baseRecord("Pre-check"), score, max:PRE.length, attempt:S.preAttempts,
+      answers: Object.fromEntries(answers.map((a,i)=>["P"+(i+1), a==null?"":"abcd"[a]])) });
+    render(); window.scrollTo(0, document.body.scrollHeight);
+  });
+
+  // Quiz: autosave drafts
+  if (current==="quiz" && !(S.quiz && S.quiz.submitted)){
+    S.quiz = S.quiz || { answers:{}, submitted:false };
+    const saveDraft = (k,v) => { S.quiz.answers[k] = v; persist(); };
+    $$("#page input[type=radio]").forEach(r => r.addEventListener("change", () => saveDraft(r.name, +r.value)));
+    $$("[data-qb]").forEach(t => t.addEventListener("input", () => saveDraft(t.dataset.qb, t.value)));
+    $$("#page .field [data-item]").forEach(i => i.addEventListener("input", () => saveDraft(i.dataset.item, i.value)));
+    $("#quizSubmit").addEventListener("click", () => {
+      const a = S.quiz.answers;
+      const missing = QA.filter(x=>a[x.id]==null).length + QC_ITEMS.filter(x=>a[x.id]==null||a[x.id]==="").length;
+      confirmBox(missing ? `You have ${missing} unanswered marked question(s). Unanswered questions score zero.` : "Submit your answers? You will see your marks and the solutions straight away.",
+        missing ? "Submit anyway" : "Submit quiz", submitQuiz);
+    });
+  }
+  if (current==="quiz" && S.quiz && S.quiz.submitted){
+    QC_ITEMS.forEach(it => markField($(`[data-field="${it.id}"]`), correct(it, S.quiz.answers[it.id])));
+    $$("#page .field [data-item]").forEach(i => i.disabled = true);
+    $("#quizRetry").addEventListener("click", () => confirmBox("Start a new attempt? Your previous attempt stays recorded, and the new one will be recorded too.", "Start new attempt", () => {
+      S.quiz = { answers:{}, submitted:false, attempt:null }; persist(); render(); window.scrollTo(0,0);
+    }));
+  }
+  const rs = $("#retrySend"); if (rs) rs.addEventListener("click", flush);
+}
+
+function markField(f, ok){
+  if (!f) return; f.classList.remove("ok","no"); f.classList.add(ok?"ok":"no");
+  const m = $(".mark", f); m.className = "mark " + (ok?"ok":"no"); m.textContent = ok ? "✓" : "✗";
+  m.setAttribute("aria-label", ok ? "Correct" : "Incorrect");
+}
+function checkActivity(key){
+  const a = ACTS[key], box = $(`[data-act="${key}"]`); let right = 0;
+  a.items.forEach(it => { const el = $(`[data-item="${it.id}"]`, box); const ok = correct(it, el.value); if (ok) right++; markField($(`[data-field="${it.id}"]`, box), ok); });
+  const fb = $(".feedback", box);
+  fb.textContent = right===a.items.length ? "All correct. Well done." : `${right} of ${a.items.length} correct. Check your working, or open the solution.`;
+  fb.style.color = right===a.items.length ? "var(--good)" : "var(--ink)";
+}
+
+function submitQuiz(){
+  const a = S.quiz.answers;
+  let sA = 0, sC = 0; const detail = {};
+  QA.forEach(x => { const ok = a[x.id]===x.a; if (ok) sA++; detail[x.id] = a[x.id]==null ? "" : "abcd"[a[x.id]] + (ok?" ✓":" ✗"); });
+  QC_ITEMS.forEach(it => { const ok = correct(it, a[it.id]); if (ok) sC++;
+    const shown = it.type==="sel" ? (a[it.id]===""||a[it.id]==null ? "" : it.opts[+a[it.id]]) : (a[it.id]||"");
+    detail[it.id] = shown + (ok?" ✓":" ✗"); });
+  S.quizAttempts++;
+  S.quiz = { answers:a, submitted:true, score:sA+sC, scoreA:sA, scoreC:sC, attempt:S.quizAttempts, synced:false };
+  enqueue({ ...baseRecord("Practice quiz"), score:sA+sC, max:QUIZ_MAX, scoreA:sA, scoreC:sC, attempt:S.quizAttempts,
+    B1:a.B1||"", B2:a.B2||"", B3:a.B3||"", B4:a.B4||"", answers:detail });
+  render(); window.scrollTo(0,0);
+}
+
+function confirmBox(msg, okLabel, onOk){
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="card" role="dialog" aria-modal="true" aria-labelledby="mTitle"><h3 id="mTitle" style="margin-top:0">${okLabel}</h3><p>${msg}</p><div class="actions"><button class="btn ghost" data-x>Go back</button><button class="btn" data-ok>${okLabel}</button></div></div>`;
+  document.body.appendChild(m);
+  const close = () => m.remove();
+  $("[data-x]", m).addEventListener("click", close);
+  $("[data-ok]", m).addEventListener("click", () => { close(); onOk(); });
+  m.addEventListener("click", e => { if (e.target===m) close(); });
+  $("[data-ok]", m).focus();
+}
+
+/* ---------- Login ---------- */
+function renderLogin(){
+  root.innerHTML = `<div class="login"><form class="card" id="loginForm" novalidate>
+    <p class="muted">${esc(COURSE)}</p><h1>Nonlinear regression functions</h1>
+    <p>Enter your details to begin. Your quiz marks are recorded under this name and matric number, so check them carefully.</p>
+    <label for="lName">Full name</label><input type="text" id="lName" autocomplete="name" maxlength="80" required>
+    <label for="lMatric">Matric number</label><input type="text" id="lMatric" autocomplete="off" maxlength="20" required>
+    <label for="lGroup">Tutorial group <span class="muted" style="font-weight:400">(optional)</span></label><input type="text" id="lGroup" maxlength="20">
+    <p class="err hidden" id="lErr" role="alert"></p>
+    <div class="actions"><button class="btn" type="submit">Start</button></div></form></div>`;
+  $("#loginForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("#lName").value.trim().replace(/\s+/g," "), matric = $("#lMatric").value.trim().toUpperCase().replace(/\s+/g,""), group = $("#lGroup").value.trim();
+    const err = $("#lErr");
+    if (name.length < 3) { err.textContent = "Enter your full name."; err.classList.remove("hidden"); return; }
+    if (!/^[A-Z0-9\-\/]{4,20}$/.test(matric)) { err.textContent = "Enter a valid matric number (letters and numbers only, 4–20 characters)."; err.classList.remove("hidden"); return; }
+    const existing = load(KEY+":"+matric);
+    S = existing || blank({name, matric, group});
+    S.student.name = name; if (group) S.student.group = group;
+    save(KEY+":current", matric); current = S.last || "home"; persist(); render(); flush();
+  });
+}
+
+/* ---------- Boot ---------- */
+const cur = load(KEY+":current");
+if (cur){ S = load(KEY+":"+cur); if (S) current = S.last || "home"; }
+render();
+if (S) flush();
+window.addEventListener("online", () => flush());
+setInterval(() => { if (S && S.outbox.length) flush(); }, 60000);
+})();
+</script>
+</body>
+</html>
